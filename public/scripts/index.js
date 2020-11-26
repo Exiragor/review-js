@@ -1,148 +1,88 @@
-import Card from './Card.js';
+import Card from '../components/Card.js';
 import FormValidator from './FormValidator.js';
+import {
+  defaultFormConfig,
+  initialCards,
+  cardSelector,
+  placeListSelector,
+  editFormPopupSelector,
+  cardFormPopupSelector,
+  imagePopupSelector,
+  profileDescSelector,
+  profileNameSelector,
+  addBtnSelector,
+  editBtnSelector
+} from '../utils/constants.js';
+import PopupWithImage from "../components/PopupWithImage.js";
+import Section from "../components/Section.js";
+import Button from "../components/Button.js";
+import PopupWithForm from "../components/PopupWithForm.js";
+import UserInfo from "../components/UserInfo.js";
 
-const ESC_KEYCODE = 27;
-// Константы
+const renderCard = ({link, name}) => {
+  const card = new Card({
+      link,
+      name,
+      handleCardClick: () => {
+        imagePopup.open({
+          src: link,
+          alt: `Изображение ${link}`,
+          caption: name
+        });
+      }
+    },
+    cardSelector
+  );
 
-const initialCards = [
-  {
-    name: 'Архыз',
-    link: 'https://pictures.s3.yandex.net/frontend-developer/cards-compressed/arkhyz.jpg'
-  },
-  {
-    name: 'Челябинская область',
-    link: 'https://pictures.s3.yandex.net/frontend-developer/cards-compressed/chelyabinsk-oblast.jpg'
-  },
-  {
-    name: 'Иваново',
-    link: 'https://pictures.s3.yandex.net/frontend-developer/cards-compressed/ivanovo.jpg'
-  },
-  {
-    name: 'Камчатка',
-    link: 'https://pictures.s3.yandex.net/frontend-developer/cards-compressed/kamchatka.jpg'
-  },
-  {
-    name: 'Холмогорский район',
-    link: 'https://pictures.s3.yandex.net/frontend-developer/cards-compressed/kholmogorsky-rayon.jpg'
-  },
-  {
-    name: 'Байкал',
-    link: 'https://pictures.s3.yandex.net/frontend-developer/cards-compressed/baikal.jpg'
-  }
-];
+  return card.getView();
+}
 
-// Врапперы
-const placesWrap = document.querySelector('.places__list');
-const editFormModalWindow = document.querySelector('.popup_type_edit');
-const cardFormModalWindow = document.querySelector('.popup_type_new-card');
-const imageModalWindow = document.querySelector('.popup_type_image');
-// С submit ребята еще плохо работают.
+const user = new UserInfo({
+  nameSelector: profileNameSelector,
+  infoSelector: profileDescSelector
+});
 
-// Кнопки и прочие дом узлы
-const openEditFormButton = document.querySelector('.profile__edit-button');
-const openCardFormButton = document.querySelector('.profile__add-button');
+const section = new Section({
+  items: initialCards,
+  renderer: renderCard,
+}, placeListSelector);
 
-// DOM узлы профиля
-const profileTitle = document.querySelector('.profile__title');
-const profileDescription = document.querySelector('.profile__description');
+section.renderItems();
 
-// Данные форм и элементы форм
-const titleInputValue = editFormModalWindow.querySelector('.popup__input_type_name');
-const descriptionInputValue = editFormModalWindow.querySelector('.popup__input_type_description');
-const cardNameInputValue = cardFormModalWindow.querySelector('.popup__input_type_card-name');
-const cardLinkInputValue = cardFormModalWindow.querySelector('.popup__input_type_url');
-// решение на минималках. Конечно, студент может корректно обобрать велью инпутов в форме.
-
-const cardSelector = '.card-template';
-const defaultFormConfig = {
-  formSelector: '.popup__form',
-  inputSelector: '.popup__input',
-  submitButtonSelector: '.popup__button',
-  inactiveButtonClass: 'popup__button_disabled',
-  inputErrorClass: 'popup__input_type_error',
-  errorClass: 'popup__error_visible'
-};
-
-const isEscEvent = (evt, action) => {
-  const activePopup = document.querySelector('.popup_is-opened');
-  if (evt.which === ESC_KEYCODE) {
-    action(activePopup);
-  }
-};
-
-const openModalWindow = (modalWindow) => {
-  modalWindow.classList.add('popup_is-opened');
-  document.addEventListener('keyup', handleEscUp);
-};
-
-const closeModalWindow = (modalWindow) => {
-  modalWindow.classList.remove('popup_is-opened');
-  document.removeEventListener('keyup', handleEscUp);
-};
-
-const renderCard = (data, wrap) => {
-  const card = new Card(data, cardSelector);
-  wrap.prepend(card.getView());
-};
-
-const handleEscUp = (evt) => {
+const editFormSubmitHandler = (evt, {name, description}) => {
   evt.preventDefault();
-  isEscEvent(evt, closeModalWindow);
+  user.setUserInfo({name, description});
+  editFormPopup.close();
 };
 
-const formSubmitHandler = (evt) => {
+const cardFormSubmitHandler = (evt, {link, ...inputValues}) => {
   evt.preventDefault();
-  profileTitle.textContent = titleInputValue.value;
-  profileDescription.textContent = descriptionInputValue.value;
-  closeModalWindow(editFormModalWindow);
+  section.addItem(renderCard({name: inputValues['place-name'], link}));
+  cardFormPopup.close();
 };
 
-const cardFormSubmitHandler = (evt) => {
-  evt.preventDefault();
-  renderCard({
-    name: cardNameInputValue.value,
-    link: cardLinkInputValue.value
-  }, placesWrap);
-  closeModalWindow(cardFormModalWindow);
-};
+const imagePopup = new PopupWithImage(imagePopupSelector);
+const editFormPopup = new PopupWithForm(editFormPopupSelector, editFormSubmitHandler);
+const cardFormPopup = new PopupWithForm(cardFormPopupSelector, cardFormSubmitHandler);
 
-// EventListeners
-editFormModalWindow.addEventListener('submit', formSubmitHandler);
-cardFormModalWindow.addEventListener('submit', cardFormSubmitHandler);
+const editFormValidators = new FormValidator(defaultFormConfig, editFormPopup.getForm());
+const cardFormValidators = new FormValidator(defaultFormConfig, cardFormPopup.getForm());
+editFormValidators.enableValidation();
+cardFormValidators.enableValidation();
 
-openEditFormButton.addEventListener('click', () => {
-  titleInputValue.value = profileTitle.textContent;
-  descriptionInputValue.value = profileDescription.textContent;
-  openModalWindow(editFormModalWindow);
+
+const openEditFormButton = new Button(editBtnSelector);
+const openCardFormButton = new Button(addBtnSelector);
+
+openEditFormButton.setHandler('click', () => {
+  const {name, description} = user.getUserInfo();
+  editFormPopup.setInputValues([
+    { key: 'name', value: name },
+    { key: 'description', value: description },
+  ]);
+  editFormPopup.open();
 });
 
-openCardFormButton.addEventListener('click', () => {
-  openModalWindow(cardFormModalWindow);
+openCardFormButton.setHandler('click', () => {
+  cardFormPopup.open();
 });
-
-editFormModalWindow.addEventListener('click', (evt) => {
-  if (evt.target.classList.contains('popup') || evt.target.classList.contains('popup__close')) {
-    closeModalWindow(editFormModalWindow);
-  }
-});
-cardFormModalWindow.addEventListener('click', (evt) => {
-  if (evt.target.classList.contains('popup') || evt.target.classList.contains('popup__close')) {
-    closeModalWindow(cardFormModalWindow);
-  }
-});
-imageModalWindow.addEventListener('click', (evt) => {
-  if (evt.target.classList.contains('popup') || evt.target.classList.contains('popup__close')) {
-    closeModalWindow(imageModalWindow);
-  }
-});
-
-// Инициализация
-initialCards.forEach((data) => {
-  renderCard(data, placesWrap)
-});
-
-const editFormValidator = new FormValidator(defaultFormConfig, editFormModalWindow);
-const cardFormValidator = new FormValidator(defaultFormConfig, cardFormModalWindow);
-
-editFormValidator.enableValidation();
-cardFormValidator.enableValidation();
