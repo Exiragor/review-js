@@ -2,9 +2,10 @@ import Popup from './Popup';
 import {defaultFormConfig} from "../../utils/constants";
 
 export default class PopupWithForm extends Popup {
-  constructor(selector, handleSubmitForm) {
+  constructor(selector, {handleSubmitForm, handleClose}) {
     super(selector);
     this._handleSubmitForm = handleSubmitForm;
+    this._handleClose = handleClose;
     this._form = this._element.querySelector(defaultFormConfig.formSelector);
     this._inputList = Array.from(this._form.querySelectorAll(defaultFormConfig.inputSelector)).map(input => ({
       name: input.name,
@@ -42,6 +43,9 @@ export default class PopupWithForm extends Popup {
   close() {
     super.close();
     this._clearForm();
+    if (this._handleClose) {
+      this._handleClose();
+    }
   }
 
   setInputValues(values) {

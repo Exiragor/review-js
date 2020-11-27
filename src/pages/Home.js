@@ -51,19 +51,38 @@ section.renderItems();
 
 const editFormSubmitHandler = (evt, {name, description}) => {
   evt.preventDefault();
-  user.setUserInfo({name, description});
-  editFormPopup.close();
+  if (!editFormValidators.checkInputsValid()) {
+    user.setUserInfo({name, description});
+    editFormPopup.close();
+  }
 };
 
 const cardFormSubmitHandler = (evt, {link, ...inputValues}) => {
   evt.preventDefault();
-  section.addItem(renderCard({name: inputValues['place-name'], link}));
-  cardFormPopup.close();
+  if (!cardFormValidators.checkInputsValid()) {
+    section.addItem(renderCard({name: inputValues['place-name'], link}));
+    cardFormPopup.close();
+  }
 };
 
+const closeEditFormHandler = () => {
+  editFormValidators.clearInputsError();
+};
+
+const closeCardFormHandler = () => {
+  cardFormValidators.clearInputsError();
+};
+
+
 const imagePopup = new PopupWithImage(imagePopupSelector);
-const editFormPopup = new PopupWithForm(editFormPopupSelector, editFormSubmitHandler);
-const cardFormPopup = new PopupWithForm(cardFormPopupSelector, cardFormSubmitHandler);
+const editFormPopup = new PopupWithForm(editFormPopupSelector, {
+  handleSubmitForm: editFormSubmitHandler,
+  handleClose: closeEditFormHandler
+});
+const cardFormPopup = new PopupWithForm(cardFormPopupSelector, {
+  handleSubmitForm: cardFormSubmitHandler,
+  handleClose: closeCardFormHandler
+});
 
 const editFormValidators = new FormValidator(defaultFormConfig, editFormPopup.getForm());
 const cardFormValidators = new FormValidator(defaultFormConfig, cardFormPopup.getForm());
@@ -80,6 +99,7 @@ openEditFormButton.setHandler('click', () => {
     { key: 'name', value: name },
     { key: 'description', value: description },
   ]);
+  editFormValidators.checkInputsValid();
   editFormPopup.open();
 });
 
